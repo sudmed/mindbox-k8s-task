@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mindbox-k8s-task-deployment
+  labels:
+    app: mindbox-k8s-task-web-application
+    env: dev
+    owner: DmitriyPashkov
+spec:
+  progressDeadlineSeconds: 100          # time-out for deployment at all, in seconds
+  selector:
+    matchLabels:
+      project: mindbox-task
+      app: mindbox-web-app
+  template:
+    metadata:
+      labels:
+        project: mindbox-task
+        app: mindbox-web-app
+    spec:
+      affinity:
+        podAntiAffinity:                # for avoid placing two Pods on same Node
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: "app"
+                operator: In
+                values:
+                - mindbox-web-app
+            topologyKey: "kubernetes.io/hostname"          
+      containers:
+        - name: mindbox-web-app
+          image: <IMAGE>
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m                 # let's point to the sky cause the task says `significantly more` w/o any values
+              memory: 160Mi             # we will make 25% reserve of over 128Mi so that OOM Killer doesn't come
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            timeoutSeconds: 10          # time-out for starting pods, in seconds
+            failureThreshold: 10
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mindbox-k8s-task-autoscaling
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: mindbox-k8s-task-deployment
+  minReplicas: 1
+  maxReplicas: 4                        # cause load testing says 4 pods is enough on peak load
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 70      # default value, there is no reason to change
+  - type: Resource
+    resource:
+      name: memory
+      targetAverageUtilization: 80      # default value, there is no reason to change
