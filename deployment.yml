@@ -59,14 +59,14 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: mindbox-k8s-task-deployment
-  minReplicas: 1
-  maxReplicas: 4                        # cause load testing says 4 pods is enough on peak load
+  minReplicas: 2
+  maxReplicas: 5                        
   metrics:
   - type: Resource
     resource:
       name: cpu
-      targetAverageUtilization: 70      # default value, there is no reason to change
+      targetAverageUtilization: 70      
   - type: Resource
     resource:
       name: memory
-      targetAverageUtilization: 80      # default value, there is no reason to change
+      targetAverageUtilization: 80      
